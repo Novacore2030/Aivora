@@ -87,21 +87,40 @@ def display_all_customers(
         "customers": customers
     }
 
-def get_all_customers():
+from fastapi import APIRouter, HTTPException, Depends
 
-    db = get_connection()
-    cursor = db.cursor(dictionary=True)
+from sqlfrontend import get_customer_by_id
+from auth import get_current_user
 
-    try:
-        cursor.execute("""
-            SELECT customer_id, customer_name,
-                   email, phone, address, created_at
-            FROM Customers
-        """)
+router = APIRouter(
+    prefix="/api/admin",
+    tags=["Admin"]
+)
 
-        return cursor.fetchall()
 
-    finally:
-        cursor.close()
-        db.close()
+@router.get("/customers/{customer_id}")
+def search_customer_by_id(
+    customer_id: int,
+    current_user=Depends(get_current_user)
+):
+
+    # Only Admin can search customers
+    if current_user["role"] != "Admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Admin only."
+        )
+
     
+    customer = get_customer_by_id(customer_id)
+
+    if not customer:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer not found"
+        )
+
+    return {
+        "message": "Customer found successfully",
+        "customer": customer
+    }
