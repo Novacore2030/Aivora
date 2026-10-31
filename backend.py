@@ -40,3 +40,33 @@ def get_customer_subscriptions(customer_id: int):
         "message": "Subscription request received",
         "customer_id": customer_id
     }
+    from fastapi import APIRouter, HTTPException, Depends
+
+from sqlfrontend import get_all_customers
+from auth import get_current_user
+
+router = APIRouter(
+    prefix="/api/admin",
+    tags=["Admin"]
+)
+
+
+@router.get("/customers")
+def display_all_customers(
+    current_user=Depends(get_current_user)
+):
+
+    # Only Admin can view all customers
+    if current_user["role"] != "Admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Admin only."
+        )
+
+    # Calling your friend's SQL function
+    customers = get_all_customers()
+
+    return {
+        "message": "Customers retrieved successfully",
+        "customers": customers
+    }
