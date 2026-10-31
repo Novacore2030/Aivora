@@ -178,7 +178,37 @@ def update_customer_details(
             detail="Access denied. Admin only."
         )
 
-    
+    def update_customer(customer_id, name, email, phone, address):
+
+    db = get_connection()
+    cursor = db.cursor()
+
+    try:
+        query = """
+        UPDATE Customers
+        SET customer_name = %s,
+            email = %s,
+            phone = %s,
+            address = %s
+        WHERE customer_id = %s
+        """
+
+        values = (name, email, phone, address, customer_id)
+
+        cursor.execute(query, values)
+        db.commit()
+
+        return cursor.rowcount
+
+    except Exception:
+        db.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        db.close()
+
+
     result = update_customer(
         customer_id,
         customer.name,
@@ -197,3 +227,4 @@ def update_customer_details(
         "message": "Customer updated successfully",
         "customer_id": customer_id
     }
+    
