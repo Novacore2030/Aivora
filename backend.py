@@ -110,8 +110,29 @@ def search_customer_by_id(
             status_code=403,
             detail="Access denied. Admin only."
         )
+        
 
-    
+    def get_customer_by_id(customer_id):
+
+    db = get_connection()
+    cursor = db.cursor(dictionary=True)
+
+    try:
+        query = """
+        SELECT customer_id, customer_name,
+               email, phone, address, created_at
+        FROM Customers
+        WHERE customer_id = %s
+        """
+
+        cursor.execute(query, (customer_id,))
+
+        return cursor.fetchone()
+
+    finally:
+        cursor.close()
+        db.close()
+
     customer = get_customer_by_id(customer_id)
 
     if not customer:
