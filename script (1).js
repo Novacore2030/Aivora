@@ -54,11 +54,24 @@ const pages = {
 
   Products: `
     <div class="welcome">
-      <h2>Products</h2>
-      <p>Manage the products offered by Brightloop.</p>
-      <button onclick="alert('Product creation coming soon!')">+ Add Product</button>
+      <h2>Product Management</h2>
+      <p>Add and manage products offered by Brightloop.</p>
+
+      <input id="productName" placeholder="Product name">
+      <input id="productID" placeholder="Product ID">
+      <input id="productPrice" type="number" placeholder="Price (₹)">
+      <input id="productCategory" placeholder="Product category">
+
+      <textarea id="productDescription" placeholder="Product description"></textarea>
+
+      <button onclick="addProduct()">+ Add Product</button>
     </div>
-  `,
+
+    <div class="card">
+      <h2>Product List</h2>
+      <div id="productList"></div>
+    </div>
+`,
 
   Subscriptions: ` 
     <div class="welcome">
