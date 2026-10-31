@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="style.css">
+
+<div class="app">
+
+  <aside class="sidebar">
+    <h2>Brightloop</h2>
+    <p>SUBSCRIPTION MANAGER</p>
+
+    <nav>
+      <button class="active" data-page="Dashboard">🏠 Dashboard</button>
+      <button data-page="Customers">👥 Customers</button>
+      <button data-page="Products">📦 Products</button>
+      <button data-page="Subscriptions">🔄 Subscriptions</button>
+      <button data-page="Invoices">🧾 Invoices</button>
+      <button data-page="Payments">💳 Payments</button>
+      <button data-page="Reports">📊 Reports</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header>
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <p>Welcome to Brightloop!</p>
+      </div>
+      <span>Admin 👤</span>
+    </header>
+
+    <section id="pageContent"></section>
+  </main>
+
+</div>
+<script src="script.js"></script>
