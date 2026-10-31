@@ -1467,3 +1467,145 @@ def get_all_quotations():
         cursor.close()
         db.close()
 
+
+
+# 1. Record a payment
+def record_payment(invoice_id, payment_method, amount, notes=None):
+    connection = get_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        # Check whether invoice exists
+        cursor.execute("""
+            SELECT total_amount, status
+            FROM Invoices
+            WHERE invoice_id = %s
+        """, (invoice_id,))
+
+        invoice = cursor.fetchone()
+
+        if not invoice:
+            raise ValueError("Invoice not found")
+
+        if invoice["status"] in ("Paid", "Cancelled"):
+            raise ValueError("This invoice cannot receive payments")
+
+        # Calculate previous payments
+        cursor.execute("""
+            SELECT COALESCE(SUM(amount), 0) AS paid_amount
+            FROM Payments
+            WHERE invoice_id = %s
+        """, (invoice_id,))
+
+        previous = Decimal(str(cursor.fetchone()["paid_amount"]))
+        total = Decimal(str(invoice["total_amount"]))
+        payment = Decimal(str(amount))
+
+        if payment <= 0:
+            raise ValueError("Payment must be greater than zero")
+
+        if previous + payment > total:
+            raise ValueError("Payment exceeds the invoice balance")
+
+        # Insert payment
+        cursor.execute("""
+            INSERT INTO Payments
+            (invoice_id, payment_method, amount, payment_date, notes)
+            VALUES (%s, %s, %s, CURDATE(), %s)
+        """, (invoice_id, payment_method, payment, notes))
+
+        payment_id = cursor.lastrowid
+
+        # Mark invoice as paid if fully paid
+        if previous + payment == total:
+            cursor.execute("""
+                UPDATE Invoices
+                SET status = 'Paid'
+                WHERE invoice_id = %s
+            """, (invoice_id,))
+
+        connection.commit()
+        return payment_id
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        connection.close()
+
+
+# 2. Get all payments
+def get_all_payments():
+    connection = get_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT p.*, i.invoice_number
+            FROM Payments p
+            JOIN Invoices i ON p.invoice_id = i.invoice_id
+            ORDER BY p.payment_date DESC
+        """)
+
+        return cursor.fetchall()
+
+    finally:
+        cursor.close()
+        connection.close()
+
+
+# 3. Get payments for a particular invoice
+def get_invoice_payments(invoice_id):
+    connection = get_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT *
+            FROM Payments
+            WHERE invoice_id = %s
+            ORDER BY payment_date DESC
+        """, (invoice_id,))
+
+        return cursor.fetchall()
+
+    finally:
+        cursor.close()
+        connection.close()
+
+
+# 4. Get total amount paid for an invoice
+def get_invoice_balance(invoice_id):
+    connection = get_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT
+                i.total_amount,
+                COALESCE(SUM(p.amount), 0) AS paid_amount
+            FROM Invoices i
+            LEFT JOIN Payments p ON i.invoice_id = p.invoice_id
+            WHERE i.invoice_id = %s
+            GROUP BY i.invoice_id
+        """, (invoice_id,))
+
+        result = cursor.fetchone()
+
+        if not result:
+            raise ValueError("Invoice not found")
+
+        total = Decimal(str(result["total_amount"]))
+        paid = Decimal(str(result["paid_amount"]))
+
+        return {
+            "total_amount": total,
+            "paid_amount": paid,
+            "balance": total - paid
+        }
+
+    finally:
+        cursor.close()
+        connection.close()
