@@ -86,4 +86,22 @@ def display_all_customers(
         "message": "Customers retrieved successfully",
         "customers": customers
     }
+
+def get_all_customers():
+
+    db = get_connection()
+    cursor = db.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT customer_id, customer_name,
+                   email, phone, address, created_at
+            FROM Customers
+        """)
+
+        return cursor.fetchall()
+
+    finally:
+        cursor.close()
+        db.close()
     
