@@ -144,3 +144,139 @@ def delete_customer(customer_id):
     finally:
         cursor.close()
         db.close()
+
+
+
+# 1. ADD PRODUCT (Admin/Staff)
+def add_product(name, product_type, sales_price, cost_price, notes):
+
+    db = get_connection()
+    cursor = db.cursor()
+
+    try:
+        query = """
+        INSERT INTO Products
+        (product_name, product_type, sales_price, cost_price, notes)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+
+        values = (name, product_type, sales_price, cost_price, notes)
+
+        cursor.execute(query, values)
+        db.commit()
+
+        return cursor.lastrowid
+
+    except Exception:
+        db.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        db.close()
+
+
+# 2. VIEW ALL PRODUCTS (Customer/Admin/Staff)
+def get_all_products():
+
+    db = get_connection()
+    cursor = db.cursor(dictionary=True)
+
+    try:
+        query = "SELECT * FROM Products"
+
+        cursor.execute(query)
+
+        return cursor.fetchall()
+
+    finally:
+        cursor.close()
+        db.close()
+
+
+# 3. VIEW A PARTICULAR PRODUCT
+def get_product_by_id(product_id):
+
+    db = get_connection()
+    cursor = db.cursor(dictionary=True)
+
+    try:
+        query = """
+        SELECT * FROM Products
+        WHERE product_id = %s
+        """
+
+        cursor.execute(query, (product_id,))
+
+        return cursor.fetchone()
+
+    finally:
+        cursor.close()
+        db.close()
+
+
+# 4. UPDATE PRODUCT (Admin/Staff)
+def update_product(product_id, name, product_type,
+                   sales_price, cost_price, notes):
+
+    db = get_connection()
+    cursor = db.cursor()
+
+    try:
+        query = """
+        UPDATE Products
+        SET product_name = %s,
+            product_type = %s,
+            sales_price = %s,
+            cost_price = %s,
+            notes = %s
+        WHERE product_id = %s
+        """
+
+        values = (
+            name,
+            product_type,
+            sales_price,
+            cost_price,
+            notes,
+            product_id
+        )
+
+        cursor.execute(query, values)
+        db.commit()
+
+        return cursor.rowcount
+
+    except Exception:
+        db.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        db.close()
+
+
+# 5. DELETE PRODUCT (Admin/Staff)
+def delete_product(product_id):
+
+    db = get_connection()
+    cursor = db.cursor()
+
+    try:
+        query = """
+        DELETE FROM Products
+        WHERE product_id = %s
+        """
+
+        cursor.execute(query, (product_id,))
+        db.commit()
+
+        return cursor.rowcount
+
+    except Exception:
+        db.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        db.close()
