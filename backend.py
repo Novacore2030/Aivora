@@ -1,230 +1,70 @@
-from fastapi import APIRouter, HTTPException
-
-router = APIRouter(
-    prefix="/api/subscriptions",
-    tags=["Subscriptions"]
-)
-
-
-@router.get("/{customer_id}")
-def get_customer_subscriptions(customer_id: int):
-
-    def add_customer(name, email, password_hash, phone, address):
-
-    db = get_connection()
-    cursor = db.cursor()
-
-    try:
-        query = """
-        INSERT INTO Customers
-        (customer_name, email, password, phone, address, created_at)
-        VALUES (%s, %s, %s, %s, %s, CURDATE())
-        """
-
-        values = (name, email, password_hash, phone, address)
-
-        cursor.execute(query, values)
-        db.commit()
-
-        return cursor.lastrowid
-
-    except Exception:
-        db.rollback()
-        raise
-
-    finally:
-        cursor.close()
-        db.close()
-
-    return {
-        "message": "Subscription request received",
-        "customer_id": customer_id
-    }
-    from fastapi import APIRouter, HTTPException, Depends
-
-from sqlfrontend import get_all_customers
-from auth import get_current_user
-
-router = APIRouter(
-    prefix="/api/admin",
-    tags=["Admin"]
-)
-
-
-@router.get("/customers")
-def display_all_customers(
-    current_user=Depends(get_current_user)
-):
-
-    # Only Admin can view all customers
-    if current_user["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied. Admin only."
-        )
-
-    def get_all_customers():
-
-    db = get_connection()
-    cursor = db.cursor(dictionary=True)
-
-    try:
-        cursor.execute("""
-            SELECT customer_id, customer_name,
-                   email, phone, address, created_at
-            FROM Customers
-        """)
-
-        return cursor.fetchall()
-
-    finally:
-        cursor.close()
-        db.close()
-    customers = get_all_customers()
-
-    return {
-        "message": "Customers retrieved successfully",
-        "customers": customers
-    }
-
 from fastapi import APIRouter, HTTPException, Depends
-
-from sqlfrontend import get_customer_by_id
-from auth import get_current_user
-
-router = APIRouter(
-    prefix="/api/admin",
-    tags=["Admin"]
-)
-
-
-@router.get("/customers/{customer_id}")
-def search_customer_by_id(
-    customer_id: int,
-    current_user=Depends(get_current_user)
-):
-
-    # Only Admin can search customers
-    if current_user["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied. Admin only."
-        )
-        
-
-    def get_customer_by_id(customer_id):
-
-    db = get_connection()
-    cursor = db.cursor(dictionary=True)
-
-    try:
-        query = """
-        SELECT customer_id, customer_name,
-               email, phone, address, created_at
-        FROM Customers
-        WHERE customer_id = %s
-        """
-
-        cursor.execute(query, (customer_id,))
-
-        return cursor.fetchone()
-
-    finally:
-        cursor.close()
-        db.close()
-
-    customer = get_customer_by_id(customer_id)
-
-    if not customer:
-        raise HTTPException(
-            status_code=404,
-            detail="Customer not found"
-        )
-
-    return {
-        "message": "Customer found successfully",
-        "customer": customer
-    }
-    from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 
-from sqlfrontend import update_customer
-from auth import get_current_user
-
-router = APIRouter(
-    prefix="/api/admin",
-    tags=["Admin"]
+from sqlfrontend import (
+    add_customer,
+    get_all_customers,
+    delete_customer
 )
+from auth import get_current_user, hash_password
+
+router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
-class CustomerUpdate(BaseModel):
+class CustomerCreate(BaseModel):
     name: str
     email: EmailStr
+    password: str
     phone: str
     address: str
 
 
-@router.put("/customers/{customer_id}")
-def update_customer_details(
-    customer_id: int,
-    customer: CustomerUpdate,
+# ADD CUSTOMER
+@router.post("/customers")
+def create_customer(
+    customer: CustomerCreate,
     current_user=Depends(get_current_user)
 ):
-
-    # Only Admin can update customer details
     if current_user["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied. Admin only."
-        )
-
-    def update_customer(customer_id, name, email, phone, address):
-
-    db = get_connection()
-    cursor = db.cursor()
+        raise HTTPException(status_code=403, detail="Admin only")
 
     try:
-        query = """
-        UPDATE Customers
-        SET customer_name = %s,
-            email = %s,
-            phone = %s,
-            address = %s
-        WHERE customer_id = %s
-        """
-
-        values = (name, email, phone, address, customer_id)
-
-        cursor.execute(query, values)
-        db.commit()
-
-        return cursor.rowcount
-
-    except Exception:
-        db.rollback()
-        raise
-
-    finally:
-        cursor.close()
-        db.close()
-
-
-    result = update_customer(
-        customer_id,
-        customer.name,
-        customer.email,
-        customer.phone,
-        customer.address
-    )
-
-    if not result:
-        raise HTTPException(
-            status_code=404,
-            detail="Customer not found or update failed"
+        customer_id = add_customer(
+            customer.name,
+            customer.email,
+            hash_password(customer.password),
+            customer.phone,
+            customer.address
         )
+        return {
+            "message": "Customer added successfully",
+            "customer_id": customer_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    return {
-        "message": "Customer updated successfully",
-        "customer_id": customer_id
-    }
-    
+
+# DISPLAY ALL CUSTOMERS
+@router.get("/customers")
+def display_customers(current_user=Depends(get_current_user)):
+    if current_user["role"] != "Admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    return {"customers": get_all_customers()}
+
+
+# DELETE CUSTOMER
+@router.delete("/customers/{customer_id}")
+def remove_customer(
+    customer_id: int,
+    current_user=Depends(get_current_user)
+):
+    if current_user["role"] != "Admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    result = delete_customer(customer_id)
+
+    if result == 0:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    return {"message": "Customer deleted successfully"}
