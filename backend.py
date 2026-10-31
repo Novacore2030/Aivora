@@ -145,3 +145,55 @@ def search_customer_by_id(
         "message": "Customer found successfully",
         "customer": customer
     }
+    from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, EmailStr
+
+from sqlfrontend import update_customer
+from auth import get_current_user
+
+router = APIRouter(
+    prefix="/api/admin",
+    tags=["Admin"]
+)
+
+
+class CustomerUpdate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    address: str
+
+
+@router.put("/customers/{customer_id}")
+def update_customer_details(
+    customer_id: int,
+    customer: CustomerUpdate,
+    current_user=Depends(get_current_user)
+):
+
+    # Only Admin can update customer details
+    if current_user["role"] != "Admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Admin only."
+        )
+
+    
+    result = update_customer(
+        customer_id,
+        customer.name,
+        customer.email,
+        customer.phone,
+        customer.address
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer not found or update failed"
+        )
+
+    return {
+        "message": "Customer updated successfully",
+        "customer_id": customer_id
+    }
