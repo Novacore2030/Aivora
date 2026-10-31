@@ -63,10 +63,27 @@ def display_all_customers(
             detail="Access denied. Admin only."
         )
 
-    # Calling your friend's SQL function
+    def get_all_customers():
+
+    db = get_connection()
+    cursor = db.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT customer_id, customer_name,
+                   email, phone, address, created_at
+            FROM Customers
+        """)
+
+        return cursor.fetchall()
+
+    finally:
+        cursor.close()
+        db.close()
     customers = get_all_customers()
 
     return {
         "message": "Customers retrieved successfully",
         "customers": customers
     }
+    
